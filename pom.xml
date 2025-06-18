@@ -6,7 +6,7 @@
 
     <groupId>org.pqca</groupId>
     <artifactId>cbomkit-lib</artifactId>
-    <version>SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -223,5 +223,13 @@
             </plugin>
         </plugins>
     </build>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub PQCA Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/PQCA/cbomkit-lib</url>
+        </repository>
+    </distributionManagement>
 </project>
 
