@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.pqca.scanning.PythonScannerServiceTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.291 s -- in org.pqca.scanning.PythonScannerServiceTest
