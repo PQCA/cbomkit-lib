@@ -20,7 +20,7 @@
 package org.pqca.errors;
 
 public class CBOMSerializationFailed extends Exception {
-    public CBOMSerializationFailed() {
-        super("Could not serialize CBOM to string");
+    public CBOMSerializationFailed(Exception e) {
+        super("Could not serialize CBOM to string: " + e);
     }
 }

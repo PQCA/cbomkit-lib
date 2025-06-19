@@ -24,9 +24,8 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.pqca.errors.ClientDisconnected;
 import org.pqca.indexing.ProjectModule;
 import org.pqca.progress.IProgressDispatcher;
@@ -55,8 +54,8 @@ public final class JavaScannerService extends ScannerService {
     private static final JavaVersion JAVA_VERSION =
             new JavaVersionImpl(JavaVersionImpl.MAX_SUPPORTED);
 
-    private String javaDependencyJars = null;
-    private String targetClassDirectories = null;
+    private List<String> javaDependencyJars = new ArrayList<String>();
+    private List<String> javaClassDirectories = new ArrayList<String>();
     private boolean requireBuild = true;
 
     public JavaScannerService(@Nonnull File projectDirectory) {
@@ -71,32 +70,19 @@ public final class JavaScannerService extends ScannerService {
         // this.targetClassDirectories = findClassDirs();
     }
 
-    public String getJavaDependencyJars() {
+    public List<String> getJavaDependencyJars() {
         return this.javaDependencyJars;
     }
 
-    // Sonar needs absolute paths. This adapts the path part in a list of glob patterns.
-    public void setJavaDependencyJars(String javaDependencyJars) {
-        this.javaDependencyJars =
-                javaDependencyJars == null
-                        ? null
-                        : Arrays.stream(javaDependencyJars.split("\\s*,\\s*"))
-                                .map(
-                                        pattern -> {
-                                            int globIdx = indexOfFirstGlobChar(pattern);
-                                            String pathPart =
-                                                    globIdx >= 0
-                                                            ? pattern.substring(0, globIdx)
-                                                            : pattern;
-                                            String globPart =
-                                                    globIdx >= 0 ? pattern.substring(globIdx) : "";
-                                            Path absPath =
-                                                    Paths.get(pathPart)
-                                                            .toAbsolutePath()
-                                                            .normalize();
-                                            return absPath.toString() + globPart;
-                                        })
-                                .collect(Collectors.joining(","));
+    // Normalize the path part since Sonar needs absolute paths.
+    public void addJavaDependencyJar(String jar) {
+        if (jar != null) {
+            int globIdx = indexOfFirstGlobChar(jar);
+            String pathPart = globIdx >= 0 ? jar.substring(0, globIdx) : jar;
+            String globPart = globIdx >= 0 ? "/" + jar.substring(globIdx) : "";
+            Path absPath = Paths.get(pathPart).toAbsolutePath().normalize();
+            this.javaDependencyJars.add(absPath.toString() + globPart);
+        }
     }
 
     private static int indexOfFirstGlobChar(String pattern) {
@@ -110,18 +96,15 @@ public final class JavaScannerService extends ScannerService {
         return minIdx;
     }
 
-    public String getJavaClassDirs() {
-        return this.targetClassDirectories;
+    public List<String> getJavaClassDirs() {
+        return this.javaClassDirectories;
     }
 
-    // Sonar needs absolute paths. This adapts a list of directories.
-    public void setJavaClassDirs(String targetClassDirectories) {
-        this.targetClassDirectories =
-                targetClassDirectories == null
-                        ? null
-                        : Arrays.stream(targetClassDirectories.split("\\s*,\\s*"))
-                                .map(dir -> Paths.get(dir).toAbsolutePath().normalize().toString())
-                                .collect(Collectors.joining(","));
+    // Normalize dir since Sonar needs absolute paths.
+    public void addJavaClassDir(String dir) {
+        if (dir != null) {
+            this.javaClassDirectories.add(Paths.get(dir).toAbsolutePath().normalize().toString());
+        }
     }
 
     public boolean getRequireBuild() {
@@ -153,8 +136,8 @@ public final class JavaScannerService extends ScannerService {
                 new MapSettings()
                         .setProperty(SonarComponents.SONAR_BATCH_MODE_KEY, true)
                         // .setProperty("sonar.java.jdkHome", System.getProperty("java.home"))
-                        .setProperty("sonar.java.libraries", javaDependencyJars)
-                        .setProperty("sonar.java.binaries", targetClassDirectories)
+                        .setProperty("sonar.java.libraries", String.join(",", javaDependencyJars))
+                        .setProperty("sonar.java.binaries", String.join(",", javaClassDirectories))
                         .setProperty(SonarComponents.SONAR_AUTOSCAN, false)
                         .setProperty(SonarComponents.SONAR_BATCH_SIZE_KEY, 8 * 1024 * 1024));
         final DefaultFileSystem fileSystem = sensorContext.fileSystem();

@@ -23,7 +23,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
-import java.nio.file.Path;
+import jakarta.annotation.Nullable;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -43,23 +45,25 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
     private static final String ACTION_NAME = "CBOMkit";
     private static final String ACTION_ORG = "PQCA";
 
-    public void merge(@Nonnull CBOM cbom) {
-        // components
-        Optional.ofNullable(this.cycloneDXbom.getComponents())
-                .ifPresent(
-                        components -> {
-                            if (cbom.cycloneDXbom().getComponents() != null) {
-                                components.addAll(cbom.cycloneDXbom.getComponents());
-                            }
-                        });
-        // dependencies
-        Optional.ofNullable(this.cycloneDXbom.getDependencies())
-                .ifPresent(
-                        dependencies -> {
-                            if (cbom.cycloneDXbom().getDependencies() != null) {
-                                dependencies.addAll(cbom.cycloneDXbom.getDependencies());
-                            }
-                        });
+    public void merge(@Nullable CBOM cbom) {
+        if (cbom != null) {
+            // components
+            Optional.ofNullable(this.cycloneDXbom.getComponents())
+                    .ifPresent(
+                            components -> {
+                                if (cbom.cycloneDXbom().getComponents() != null) {
+                                    components.addAll(cbom.cycloneDXbom.getComponents());
+                                }
+                            });
+            // dependencies
+            Optional.ofNullable(this.cycloneDXbom.getDependencies())
+                    .ifPresent(
+                            dependencies -> {
+                                if (cbom.cycloneDXbom().getDependencies() != null) {
+                                    dependencies.addAll(cbom.cycloneDXbom.getDependencies());
+                                }
+                            });
+        }
     }
 
     public static @Nonnull CBOM formJSON(@Nonnull JsonNode jsonNode)
@@ -68,7 +72,7 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
             final ObjectMapper mapper = new ObjectMapper();
             return new CBOM(mapper.treeToValue(jsonNode, Bom.class));
         } catch (JsonProcessingException e) {
-            throw new CBOMSerializationFailed();
+            throw new CBOMSerializationFailed(e);
         }
     }
 
@@ -79,15 +83,11 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
                     BomGeneratorFactory.createJson(Version.VERSION_16, cycloneDXbom);
             return mapper.readTree(bomGenerator.toJsonString());
         } catch (JsonProcessingException | GeneratorException e) {
-            throw new CBOMSerializationFailed();
+            throw new CBOMSerializationFailed(e);
         }
     }
 
-    public void addMetadata(
-            @Nonnull String gitUrl,
-            @Nonnull String revision,
-            @Nonnull String commit,
-            Optional<Path> subFolder) {
+    public void addMetadata(String gitUrl, String revision, String commit, String subFolder) {
         final Metadata metadata = new Metadata();
         metadata.setTimestamp(new Date());
 
@@ -101,29 +101,56 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
         scannerInfo.setServices(List.of(scannerService));
         metadata.setToolChoice(scannerInfo);
 
-        final Property gitUrlProperty = new Property();
-        gitUrlProperty.setName("gitUrl");
-        gitUrlProperty.setValue(gitUrl);
-        metadata.addProperty(gitUrlProperty);
+        if (gitUrl != null) {
+            final Property gitUrlProperty = new Property();
+            gitUrlProperty.setName("gitUrl");
+            gitUrlProperty.setValue(gitUrl);
+            metadata.addProperty(gitUrlProperty);
+        }
 
-        final Property revisionProperty = new Property();
-        revisionProperty.setName("revision");
-        revisionProperty.setValue(revision);
-        metadata.addProperty(revisionProperty);
+        if (revision != null) {
+            final Property revisionProperty = new Property();
+            revisionProperty.setName("revision");
+            revisionProperty.setValue(revision);
+            metadata.addProperty(revisionProperty);
+        }
 
-        final Property commitProperty = new Property();
-        commitProperty.setName("commit");
-        commitProperty.setValue(commit);
-        metadata.addProperty(commitProperty);
+        if (commit != null) {
+            final Property commitProperty = new Property();
+            commitProperty.setName("commit");
+            commitProperty.setValue(commit);
+            metadata.addProperty(commitProperty);
+        }
 
-        subFolder.ifPresent(
-                path -> {
-                    final Property subFolderProperty = new Property();
-                    subFolderProperty.setName("subfolder");
-                    subFolderProperty.setValue(path.toString());
-                    metadata.addProperty(subFolderProperty);
-                });
+        if (subFolder != null) {
+            final Property subFolderProperty = new Property();
+            subFolderProperty.setName("subfolder");
+            subFolderProperty.setValue(subFolder);
+            metadata.addProperty(subFolderProperty);
+        }
 
         cycloneDXbom.setMetadata(metadata);
+    }
+
+    public void write(String fileName) throws CBOMSerializationFailed {
+        final BomJsonGenerator bomGenerator =
+                BomGeneratorFactory.createJson(Version.VERSION_16, cycloneDXbom);
+
+        try {
+            String bomString = bomGenerator.toJsonString();
+            if (bomString != null) {
+                try (FileWriter writer = new FileWriter(fileName)) {
+                    writer.write(bomString);
+                }
+            }
+        } catch (IOException | GeneratorException e) {
+            throw new CBOMSerializationFailed(e);
+        }
+    }
+
+    public int getNumberOfFindings() {
+        return cycloneDXbom.getComponents().stream()
+                .mapToInt(component -> component.getEvidence().getOccurrences().size())
+                .sum();
     }
 }

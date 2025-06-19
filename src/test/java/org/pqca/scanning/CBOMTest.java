@@ -17,14 +17,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.pqca.utils;
+package org.pqca.scanning;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.Optional;
 import org.cyclonedx.model.Bom;
 import org.cyclonedx.model.Component;
 import org.cyclonedx.model.Dependency;
@@ -32,7 +30,6 @@ import org.cyclonedx.model.Metadata;
 import org.cyclonedx.model.Property;
 import org.cyclonedx.model.Service;
 import org.junit.jupiter.api.Test;
-import org.pqca.scanning.CBOM;
 
 public class CBOMTest {
     @Test
@@ -43,7 +40,7 @@ public class CBOMTest {
                 "https://github.com/keycloak/keycloak",
                 "main",
                 "9c2825eb0e64aa7ea40b8dc3605d37046f6a24cb",
-                Optional.of(Paths.get("core")));
+                "core");
         Metadata metadata = cbom.cycloneDXbom().getMetadata();
         assertThat(metadata).isNotNull();
         assertThat(metadata.getTimestamp()).isNotNull();

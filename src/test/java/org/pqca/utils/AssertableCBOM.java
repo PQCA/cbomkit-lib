@@ -82,12 +82,6 @@ public class AssertableCBOM {
     }
 
     public void hasNumberOfDetections(int number) {
-        assertThat(
-                        this.cbom.cycloneDXbom().getComponents().stream()
-                                .mapToInt(
-                                        component ->
-                                                component.getEvidence().getOccurrences().size())
-                                .sum())
-                .isEqualTo(number);
+        assertThat(this.cbom.getNumberOfFindings()).isEqualTo(number);
     }
 }

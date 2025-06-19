@@ -1,6 +1,0 @@
-org/pqca/utils/CBOMTest.class
-org/pqca/indexing/PythonIndexServiceTest.class
-org/pqca/indexing/JavaIndexServiceTest.class
-org/pqca/utils/AssertableCBOM.class
-org/pqca/scanning/JavaScannerServiceTest.class
-org/pqca/scanning/PythonScannerServiceTest.class

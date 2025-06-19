@@ -49,7 +49,7 @@ class JavaScannerServiceTest {
         }
         // scanning
         final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);
-        javaScannerService.setJavaDependencyJars("src/test/resources/java/scan");
+        javaScannerService.addJavaDependencyJar("src/test/resources/java/scan");
         javaScannerService.setRequireBuild(false);
         ScanResultDTO scanResult = javaScannerService.scan(projectModules);
 
