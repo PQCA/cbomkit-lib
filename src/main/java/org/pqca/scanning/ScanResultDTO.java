@@ -24,6 +24,6 @@ import jakarta.annotation.Nullable;
 public record ScanResultDTO(
         long startTime,
         long endTime,
-        int numberOfScannedLine,
+        int numberOfScannedLines,
         int numberOfScannedFiles,
         @Nullable CBOM cbom) {}

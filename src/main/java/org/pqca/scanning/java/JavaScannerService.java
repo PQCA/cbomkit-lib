@@ -168,7 +168,7 @@ public final class JavaScannerService extends ScannerService {
         for (ProjectModule project : index) {
             numberOfScannedFiles += project.inputFileList().size();
             numberOfScannedLines +=
-                    project.inputFileList().stream().map(InputFile::lines).reduce(0, Integer::sum);
+                    project.inputFileList().stream().mapToInt(InputFile::lines).sum();
 
             final String projectStr =
                     project.identifier() + " (" + counter + "/" + index.size() + ")";

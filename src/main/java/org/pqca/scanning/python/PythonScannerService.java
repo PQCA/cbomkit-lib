@@ -59,6 +59,10 @@ public final class PythonScannerService extends ScannerService {
         int numberOfScannedLines = 0;
         int numberOfScannedFiles = 0;
         for (ProjectModule project : index) {
+            numberOfScannedFiles += project.inputFileList().size();
+            numberOfScannedLines +=
+                    project.inputFileList().stream().mapToInt(InputFile::lines).sum();
+
             final String projectStr =
                     project.identifier() + " (" + counter + "/" + index.size() + ")";
             if (this.progressDispatcher != null) {

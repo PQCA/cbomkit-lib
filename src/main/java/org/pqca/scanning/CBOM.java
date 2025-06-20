@@ -28,7 +28,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import org.cyclonedx.Version;
 import org.cyclonedx.exception.GeneratorException;
 import org.cyclonedx.generators.BomGeneratorFactory;
@@ -45,24 +44,27 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
     private static final String ACTION_NAME = "CBOMkit";
     private static final String ACTION_ORG = "PQCA";
 
+    // Merge components and dependecies
     public void merge(@Nullable CBOM cbom) {
         if (cbom != null) {
             // components
-            Optional.ofNullable(this.cycloneDXbom.getComponents())
-                    .ifPresent(
-                            components -> {
-                                if (cbom.cycloneDXbom().getComponents() != null) {
-                                    components.addAll(cbom.cycloneDXbom.getComponents());
-                                }
-                            });
+            if (cbom.cycloneDXbom().getComponents() != null) {
+                if (this.cycloneDXbom().getComponents() != null) {
+                    this.cycloneDXbom().getComponents().addAll(cbom.cycloneDXbom().getComponents());
+                } else {
+                    this.cycloneDXbom().setComponents(cbom.cycloneDXbom().getComponents());
+                }
+            }
             // dependencies
-            Optional.ofNullable(this.cycloneDXbom.getDependencies())
-                    .ifPresent(
-                            dependencies -> {
-                                if (cbom.cycloneDXbom().getDependencies() != null) {
-                                    dependencies.addAll(cbom.cycloneDXbom.getDependencies());
-                                }
-                            });
+            if (cbom.cycloneDXbom().getDependencies() != null) {
+                if (this.cycloneDXbom().getDependencies() != null) {
+                    this.cycloneDXbom()
+                            .getDependencies()
+                            .addAll(cbom.cycloneDXbom().getDependencies());
+                } else {
+                    this.cycloneDXbom().setDependencies(cbom.cycloneDXbom().getDependencies());
+                }
+            }
         }
     }
 

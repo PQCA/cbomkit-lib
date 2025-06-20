@@ -139,7 +139,7 @@ public abstract class IndexingService {
                                         + files.size()
                                         + " "
                                         + languageFileExtension
-                                        + "files]"));
+                                        + " files]"));
             }
             LOGGER.info(
                     "Found project module '"
@@ -148,7 +148,7 @@ public abstract class IndexingService {
                             + files.size()
                             + " "
                             + languageFileExtension
-                            + "files]");
+                            + " files]");
             projectModules.add(
                     new ProjectModule(projectIdentifier, projectDirectory.toPath(), files));
         }
