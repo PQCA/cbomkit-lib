@@ -19,8 +19,14 @@
  */
 package org.pqca.errors;
 
+import jakarta.annotation.Nonnull;
+
 public class CBOMSerializationFailed extends Exception {
-    public CBOMSerializationFailed(Exception e) {
+    public CBOMSerializationFailed(@Nonnull Exception e) {
         super("Could not serialize CBOM to string: " + e);
+    }
+
+    public CBOMSerializationFailed() {
+        super("Could not serialize CBOM to string");
     }
 }

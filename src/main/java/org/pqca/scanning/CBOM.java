@@ -46,23 +46,21 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
 
     // Merge components and dependecies
     public void merge(@Nullable CBOM cbom) {
-        if (cbom != null) {
+        if (cycloneDXbom != null && cbom != null && cbom.cycloneDXbom() != null) {
             // components
             if (cbom.cycloneDXbom().getComponents() != null) {
-                if (this.cycloneDXbom().getComponents() != null) {
-                    this.cycloneDXbom().getComponents().addAll(cbom.cycloneDXbom().getComponents());
+                if (cycloneDXbom.getComponents() != null) {
+                    cycloneDXbom.getComponents().addAll(cbom.cycloneDXbom().getComponents());
                 } else {
-                    this.cycloneDXbom().setComponents(cbom.cycloneDXbom().getComponents());
+                    cycloneDXbom.setComponents(cbom.cycloneDXbom().getComponents());
                 }
             }
             // dependencies
             if (cbom.cycloneDXbom().getDependencies() != null) {
-                if (this.cycloneDXbom().getDependencies() != null) {
-                    this.cycloneDXbom()
-                            .getDependencies()
-                            .addAll(cbom.cycloneDXbom().getDependencies());
+                if (cycloneDXbom.getDependencies() != null) {
+                    cycloneDXbom.getDependencies().addAll(cbom.cycloneDXbom().getDependencies());
                 } else {
-                    this.cycloneDXbom().setDependencies(cbom.cycloneDXbom().getDependencies());
+                    cycloneDXbom.setDependencies(cbom.cycloneDXbom().getDependencies());
                 }
             }
         }
@@ -90,6 +88,10 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
     }
 
     public void addMetadata(String gitUrl, String revision, String commit, String subFolder) {
+        if (cycloneDXbom == null) {
+            return;
+        }
+
         final Metadata metadata = new Metadata();
         metadata.setTimestamp(new Date());
 
@@ -151,6 +153,9 @@ public record CBOM(@Nonnull Bom cycloneDXbom) {
     }
 
     public int getNumberOfFindings() {
+        if (cycloneDXbom == null || cycloneDXbom.getComponents() == null) {
+            return 0;
+        }
         return cycloneDXbom.getComponents().stream()
                 .mapToInt(component -> component.getEvidence().getOccurrences().size())
                 .sum();
