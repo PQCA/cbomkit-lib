@@ -20,8 +20,10 @@
 package org.pqca.scanning;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.pqca.errors.ClientDisconnected;
@@ -154,5 +156,72 @@ class JavaScannerServiceTest {
                                 "src/test/testdata/java/keycloak/services/src/main/java/org/keycloak/connections/httpclient/HttpClientBuilder.java",
                                 245))
                 .isTrue();
+    }
+
+    @Test
+    void testRequireBuildException() throws ClientDisconnected {
+        final File projectDirectory = new File("src/test/testdata/java/plain");
+        final JavaIndexService javaIndexService = new JavaIndexService(projectDirectory);
+        javaIndexService.setFileExcluder(f -> false);
+
+        final List<ProjectModule> projectModules = javaIndexService.index(null);
+        final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);
+        javaScannerService.setRequireBuild(true);
+
+        IllegalStateException exception =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> javaScannerService.scan(projectModules),
+                        "Expected IllegalStateException");
+        assertThat(
+                exception
+                        .getMessage()
+                        .equals(
+                                "No Java build artifacts found. Project must be build prior to scanning"));
+    }
+
+    @Test
+    void testRequireBuildTrue() throws ClientDisconnected {
+        final File projectDirectory = new File("src/test/testdata/java/plain");
+        final JavaIndexService javaIndexService = new JavaIndexService(projectDirectory);
+        javaIndexService.setFileExcluder(f -> false);
+
+        final List<ProjectModule> projectModules = javaIndexService.index(null);
+        final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);
+        javaScannerService.setRequireBuild(true);
+        javaScannerService.addJavaDependencyJar(projectDirectory.getAbsolutePath());
+        javaScannerService.scan(projectModules);
+
+        ScanResultDTO scanResult = javaScannerService.scan(projectModules);
+        AssertableCBOM assertableCBOM = new AssertableCBOM(scanResult.cbom());
+        assertableCBOM.hasNumberOfDetections(1);
+    }
+
+    @Test
+    void testRequireBuildFalse() throws ClientDisconnected {
+        final File projectDirectory = new File("src/test/testdata/java/plain");
+        final JavaIndexService javaIndexService = new JavaIndexService(projectDirectory);
+        javaIndexService.setFileExcluder(f -> false);
+
+        final List<ProjectModule> projectModules = javaIndexService.index(null);
+        final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);
+        javaScannerService.setRequireBuild(false);
+        javaScannerService.scan(projectModules);
+
+        ScanResultDTO scanResult = javaScannerService.scan(projectModules);
+        AssertableCBOM assertableCBOM = new AssertableCBOM(scanResult.cbom());
+        assertableCBOM.hasNumberOfDetections(1);
+    }
+
+    @Test
+    void testNoJavaProjects() throws ClientDisconnected {
+        final File projectDirectory = new File("src/test/testdata/java/plain");
+        final List<ProjectModule> projectModules = new ArrayList<ProjectModule>();
+        final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);
+        javaScannerService.setRequireBuild(true);
+
+        ScanResultDTO scanResult = javaScannerService.scan(projectModules);
+        AssertableCBOM assertableCBOM = new AssertableCBOM(scanResult.cbom());
+        assertableCBOM.hasNumberOfDetections(0);
     }
 }
