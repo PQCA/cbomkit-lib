@@ -30,10 +30,17 @@ import org.sonar.api.batch.fs.InputFile;
 
 class JavaIndexServiceTest {
     @Test
+    void testExclusion() throws ClientDisconnected {
+        final JavaIndexService javaIndexService = new JavaIndexService(new File("."));
+        javaIndexService.setExcludePatterns(List.of("src/.*"));
+        final List<ProjectModule> projectModules = javaIndexService.index(null);
+        assertThat(projectModules).hasSize(0);
+    }
+
+    @Test
     void test() throws ClientDisconnected {
         final JavaIndexService javaIndexService =
                 new JavaIndexService(new File("src/test/testdata/java/keycloak"));
-        javaIndexService.setFileExcluder(f -> false);
         final List<ProjectModule> projectModules = javaIndexService.index(null);
         assertThat(projectModules).hasSize(2);
         for (ProjectModule projectModule : projectModules) {
@@ -49,7 +56,6 @@ class JavaIndexServiceTest {
     void plain() throws ClientDisconnected {
         final JavaIndexService javaIndexService =
                 new JavaIndexService(new File("src/test/testdata/java/plain"));
-        javaIndexService.setFileExcluder(f -> false);
         final List<ProjectModule> projectModules = javaIndexService.index(null);
         assertThat(projectModules).hasSize(1);
         final ProjectModule projectModule = projectModules.getFirst();
@@ -60,7 +66,6 @@ class JavaIndexServiceTest {
     void nested() throws ClientDisconnected {
         final JavaIndexService javaIndexService =
                 new JavaIndexService(new File("src/test/testdata/java/nested"));
-        javaIndexService.setFileExcluder(f -> false);
         final List<ProjectModule> projectModules = javaIndexService.index(null);
         assertThat(projectModules).hasSize(2);
         final ProjectModule projectModule1 = projectModules.getFirst();

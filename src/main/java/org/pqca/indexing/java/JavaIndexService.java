@@ -36,8 +36,16 @@ public final class JavaIndexService extends IndexingService {
     public JavaIndexService(
             @Nullable IProgressDispatcher progressDispatcher, @Nonnull File baseDirectory) {
         super(progressDispatcher, baseDirectory, "java", ".java");
-        this.setFileExcluder(
-                f -> f.getPath().contains("src/test/") || f.getName().contains("package-info"));
+        this.setExcludePatterns(null);
+    }
+
+    public void setExcludePatterns(@Nullable List<String> patterns) {
+        if (patterns == null) {
+            super.setExcludePatterns(
+                    List.of("src/test/", "/package-info.java$", "/module-info.java$"));
+        } else {
+            super.setExcludePatterns(patterns);
+        }
     }
 
     @Override

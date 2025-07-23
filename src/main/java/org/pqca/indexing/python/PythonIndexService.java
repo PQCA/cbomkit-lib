@@ -36,8 +36,15 @@ public final class PythonIndexService extends IndexingService {
     public PythonIndexService(
             @Nullable IProgressDispatcher progressDispatcher, @Nonnull File baseDirectory) {
         super(progressDispatcher, baseDirectory, "python", ".py");
-        this.setFileExcluder(
-                f -> f.getPath().contains("tests/") || f.getPath().contains("src/test/"));
+        this.setExcludePatterns(null);
+    }
+
+    public void setExcludePatterns(@Nullable List<String> patterns) {
+        if (patterns == null) {
+            super.setExcludePatterns(List.of("src/test/", "tests/"));
+        } else {
+            super.setExcludePatterns(patterns);
+        }
     }
 
     @Override

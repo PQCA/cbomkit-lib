@@ -122,7 +122,7 @@ public final class JavaScannerService extends ScannerService {
         if (!index.isEmpty() && (javaDependencyJars.isEmpty() && javaClassDirectories.isEmpty())) {
             if (this.requireBuild) {
                 throw new IllegalStateException(
-                        "No Java build artifacts found. Project must be build prior to scanning");
+                        "No Java build artifacts found. Project must be built prior to scanning");
             } else {
                 LOGGER.warn(
                         "No Java build artifacts found. Scanning Java code without prior build may produce less accurate CBOMs.");

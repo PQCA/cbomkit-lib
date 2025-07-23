@@ -32,7 +32,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.regex.Pattern;
 import org.pqca.errors.ClientDisconnected;
 import org.pqca.progress.IProgressDispatcher;
 import org.pqca.progress.ProgressMessage;
@@ -51,7 +51,7 @@ public abstract class IndexingService {
     @Nonnull private File baseDirectory;
     @Nullable private IBuildType mainBuildType;
 
-    protected Function<File, Boolean> excludeFromIndexing = f -> false;
+    private List<Pattern> excludePatterns = new ArrayList<Pattern>();
 
     protected IndexingService(
             @Nonnull File baseDirectory,
@@ -71,8 +71,9 @@ public abstract class IndexingService {
         this.languageFileExtension = languageFileExtension;
     }
 
-    public void setFileExcluder(Function<File, Boolean> excludeFromIndexing) {
-        this.excludeFromIndexing = excludeFromIndexing;
+    public void setExcludePatterns(@Nonnull List<String> excludePatterns) {
+        this.excludePatterns =
+                excludePatterns.stream().map(pattern -> Pattern.compile(pattern)).toList();
     }
 
     @Nonnull
@@ -92,7 +93,7 @@ public abstract class IndexingService {
     private void detectModules(
             @Nonnull File projectDirectory, @Nonnull List<ProjectModule> projectModules)
             throws ClientDisconnected {
-        if (projectDirectory.isFile()) {
+        if (projectDirectory.isFile() || excludeFromIndexing(projectDirectory)) {
             return;
         }
         if (isModule(projectDirectory)) {
@@ -113,7 +114,7 @@ public abstract class IndexingService {
                     this.detectModules(file, projectModules);
                 }
             }
-            // if no models where found just add all files
+            // if no modules where found just add all files
             if (projectModules.isEmpty()) {
                 addProjectModuleFromDirectory(projectModules, projectDirectory);
             }
@@ -123,6 +124,10 @@ public abstract class IndexingService {
     void addProjectModuleFromDirectory(
             @Nonnull List<ProjectModule> projectModules, @Nonnull File projectDirectory)
             throws ClientDisconnected {
+        if (excludeFromIndexing(projectDirectory)) {
+            return;
+        }
+
         final String projectIdentifier = getProjectIdentifier(projectDirectory);
         final File[] filesInDirectory = projectDirectory.listFiles();
         final List<InputFile> files = new ArrayList<>();
@@ -173,9 +178,8 @@ public abstract class IndexingService {
                 }
                 continue;
             }
-            // apply filter
-            if (!this.excludeFromIndexing.apply(file)
-                    && file.getName().endsWith(this.languageFileExtension)) {
+            if (file.getName().endsWith(this.languageFileExtension)
+                    && !this.excludeFromIndexing(file)) {
                 try {
                     final TestInputFileBuilder builder =
                             createTestFileBuilder(projectDirectory, file);
@@ -186,6 +190,11 @@ public abstract class IndexingService {
                 }
             }
         }
+    }
+
+    private boolean excludeFromIndexing(@Nonnull File file) {
+        String relativePath = getProjectIdentifier(file);
+        return excludePatterns.stream().anyMatch(p -> p.matcher(relativePath).find());
     }
 
     @Nonnull
