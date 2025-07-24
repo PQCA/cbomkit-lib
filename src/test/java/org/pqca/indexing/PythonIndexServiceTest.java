@@ -29,10 +29,16 @@ import org.pqca.indexing.python.PythonIndexService;
 
 class PythonIndexServiceTest {
     @Test
-    void test() throws ClientDisconnected {
-        final PythonIndexService pythonIndexService =
-                new PythonIndexService(new File("src/test/testdata/python/pyca"));
-        pythonIndexService.setFileExcluder(f -> false);
+    void testDefaultExclusion() throws ClientDisconnected {
+        final PythonIndexService pythonIndexService = new PythonIndexService(new File("."));
+        final List<ProjectModule> projectModules = pythonIndexService.index(null);
+        assertThat(projectModules).hasSize(0);
+    }
+
+    @Test
+    void testNoExclusion() throws ClientDisconnected {
+        final PythonIndexService pythonIndexService = new PythonIndexService(new File("."));
+        pythonIndexService.setExcludePatterns(List.of());
         final List<ProjectModule> projectModules = pythonIndexService.index(null);
         assertThat(projectModules).hasSize(1);
         final ProjectModule projectModule = projectModules.getFirst();

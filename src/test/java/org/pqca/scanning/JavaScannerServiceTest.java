@@ -20,7 +20,7 @@
 package org.pqca.scanning;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,7 +38,6 @@ class JavaScannerServiceTest {
     void test() throws ClientDisconnected {
         final File projectDirectory = new File("src/test/testdata/java/keycloak");
         final JavaIndexService javaIndexService = new JavaIndexService(projectDirectory);
-        javaIndexService.setFileExcluder(f -> false);
         // indexing
         final List<ProjectModule> projectModules = javaIndexService.index(null);
         assertThat(projectModules).hasSize(2);
@@ -162,29 +161,21 @@ class JavaScannerServiceTest {
     void testRequireBuildException() throws ClientDisconnected {
         final File projectDirectory = new File("src/test/testdata/java/plain");
         final JavaIndexService javaIndexService = new JavaIndexService(projectDirectory);
-        javaIndexService.setFileExcluder(f -> false);
 
         final List<ProjectModule> projectModules = javaIndexService.index(null);
         final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);
         javaScannerService.setRequireBuild(true);
 
-        IllegalStateException exception =
-                assertThrows(
-                        IllegalStateException.class,
-                        () -> javaScannerService.scan(projectModules),
-                        "Expected IllegalStateException");
-        assertThat(
-                exception
-                        .getMessage()
-                        .equals(
-                                "No Java build artifacts found. Project must be build prior to scanning"));
+        assertThatIllegalStateException()
+                .isThrownBy(() -> javaScannerService.scan(projectModules))
+                .withMessage(
+                        "No Java build artifacts found. Project must be built prior to scanning");
     }
 
     @Test
     void testRequireBuildTrue() throws ClientDisconnected {
         final File projectDirectory = new File("src/test/testdata/java/plain");
         final JavaIndexService javaIndexService = new JavaIndexService(projectDirectory);
-        javaIndexService.setFileExcluder(f -> false);
 
         final List<ProjectModule> projectModules = javaIndexService.index(null);
         final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);
@@ -201,7 +192,6 @@ class JavaScannerServiceTest {
     void testRequireBuildFalse() throws ClientDisconnected {
         final File projectDirectory = new File("src/test/testdata/java/plain");
         final JavaIndexService javaIndexService = new JavaIndexService(projectDirectory);
-        javaIndexService.setFileExcluder(f -> false);
 
         final List<ProjectModule> projectModules = javaIndexService.index(null);
         final JavaScannerService javaScannerService = new JavaScannerService(projectDirectory);

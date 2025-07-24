@@ -37,7 +37,6 @@ class PythonScannerServiceTest {
         // indexing
         final File projectDirectory = new File("src/test/testdata/python/pyca");
         final PythonIndexService pythonIndexService = new PythonIndexService(projectDirectory);
-        pythonIndexService.setFileExcluder(f -> false);
         final List<ProjectModule> projectModules = pythonIndexService.index(null);
         assertThat(projectModules).hasSize(1);
         final ProjectModule projectModule = projectModules.getFirst();
