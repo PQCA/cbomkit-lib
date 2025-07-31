@@ -68,7 +68,7 @@ jobs:
             </servers>
           </settings>" > ~/.m2/settings.xml
       - name: Build and Publish to Github Packages
-        run: mvn --batch-mode clean deploy
+        run: mvn --batch-mode clean package deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create CBOM
