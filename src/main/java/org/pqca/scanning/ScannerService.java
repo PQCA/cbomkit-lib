@@ -21,6 +21,7 @@ package org.pqca.scanning;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Objects;
 import com.ibm.mapper.model.INode;
 import com.ibm.output.IOutputFileFactory;
 import com.ibm.output.cyclondx.CBOMOutputFile;
@@ -52,13 +53,13 @@ public abstract class ScannerService implements IScannerService {
     @Nullable protected final IProgressDispatcher progressDispatcher;
     @Nonnull protected final File projectDirectory;
     @Nonnull protected final CBOMOutputFile cbomOutputFile;
-    @Nonnull Set<String> findings;
+    @Nonnull Set<Integer> findings;
 
     protected ScannerService(
             @Nullable IProgressDispatcher progressDispatcher, @Nonnull File projectDirectory) {
         this.progressDispatcher = progressDispatcher;
         this.projectDirectory = projectDirectory;
-        this.findings = new HashSet<String>();
+        this.findings = new HashSet<Integer>();
         this.cbomOutputFile = new CBOMOutputFile();
     }
 
@@ -100,9 +101,11 @@ public abstract class ScannerService implements IScannerService {
         }
     }
 
-    // Fix for #268: A finding is a cryptoProperties object at a particular location.
+    // Fix for #268: A finding is a cryptoProperties object at a particular
+    // location.
     // A single component may therefore represent multiple findings.
-    // Subsequent calls to accept may produce duplicate findings in different components.
+    // Subsequent calls to accept may produce duplicate findings in different
+    // components.
     @Nonnull
     private List<Occurrence> deduplicateFindings(@Nonnull Component component) {
         List<Occurrence> deduplicated = new ArrayList<Occurrence>();
@@ -111,16 +114,15 @@ public abstract class ScannerService implements IScannerService {
                 .getOccurrences()
                 .forEach(
                         occurrence -> {
-                            String fKey =
-                                    String.format(
-                                            "%s@%s-L%d-O%d",
+                            int findingId =
+                                    Objects.hashCode(
                                             component.getName(),
                                             occurrence.getLocation(),
                                             occurrence.getLine(),
                                             occurrence.getOffset());
-                            if (!this.findings.contains(fKey)) {
+                            if (!this.findings.contains(findingId)) {
                                 deduplicated.add(occurrence);
-                                this.findings.add(fKey);
+                                this.findings.add(findingId);
                             }
                         });
         return deduplicated;
