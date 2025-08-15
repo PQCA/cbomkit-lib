@@ -29,9 +29,12 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.cyclonedx.model.Bom;
 import org.cyclonedx.model.Component;
 import org.cyclonedx.model.Evidence;
@@ -49,11 +52,13 @@ public abstract class ScannerService implements IScannerService {
     @Nullable protected final IProgressDispatcher progressDispatcher;
     @Nonnull protected final File projectDirectory;
     @Nonnull protected final CBOMOutputFile cbomOutputFile;
+    @Nonnull Set<String> findings;
 
     protected ScannerService(
             @Nullable IProgressDispatcher progressDispatcher, @Nonnull File projectDirectory) {
         this.progressDispatcher = progressDispatcher;
         this.projectDirectory = projectDirectory;
+        this.findings = new HashSet<String>();
         this.cbomOutputFile = new CBOMOutputFile();
     }
 
@@ -69,20 +74,67 @@ public abstract class ScannerService implements IScannerService {
                         .getComponents()
                         .forEach(
                                 component -> {
-                                    ScannerService.sanitizeOccurrence(
-                                            this.projectDirectory, component);
-                                    try {
-                                        this.progressDispatcher.send(
-                                                new ProgressMessage(
-                                                        ProgressMessageType.DETECTION,
-                                                        new ObjectMapper()
-                                                                .writeValueAsString(component)));
-                                    } catch (JsonProcessingException | ClientDisconnected e) {
-                                        LOGGER.error(e.getMessage());
+                                    List<Occurrence> deduplicated = deduplicateFindings(component);
+                                    if (!deduplicated.isEmpty()) {
+                                        final Component newComponent =
+                                                ScannerService.copyCryptoAsset(component);
+                                        final Evidence newEvidence = new Evidence();
+                                        newEvidence.setOccurrences(deduplicated);
+                                        newComponent.setEvidence(newEvidence);
+
+                                        ScannerService.sanitizeOccurrence(
+                                                this.projectDirectory, newComponent);
+                                        try {
+                                            this.progressDispatcher.send(
+                                                    new ProgressMessage(
+                                                            ProgressMessageType.DETECTION,
+                                                            new ObjectMapper()
+                                                                    .writeValueAsString(
+                                                                            newComponent)));
+                                        } catch (JsonProcessingException | ClientDisconnected e) {
+                                            LOGGER.error(e.getMessage());
+                                        }
                                     }
                                 });
             }
         }
+    }
+
+    // Fix for #268: A finding is a cryptoProperties object at a particular location.
+    // A single component may therefore represent multiple findings.
+    // Subsequent calls to accept may produce duplicate findings in different components.
+    @Nonnull
+    private List<Occurrence> deduplicateFindings(@Nonnull Component component) {
+        List<Occurrence> deduplicated = new ArrayList<Occurrence>();
+        component
+                .getEvidence()
+                .getOccurrences()
+                .forEach(
+                        occurrence -> {
+                            String fKey =
+                                    String.format(
+                                            "%s@%s-L%d-O%d",
+                                            component.getName(),
+                                            occurrence.getLocation(),
+                                            occurrence.getLine(),
+                                            occurrence.getOffset());
+                            if (!this.findings.contains(fKey)) {
+                                deduplicated.add(occurrence);
+                                this.findings.add(fKey);
+                            }
+                        });
+        return deduplicated;
+    }
+
+    @Nonnull
+    private static Component copyCryptoAsset(@Nonnull Component component) {
+        final Component newComponent = new Component();
+        newComponent.setBomRef(component.getBomRef());
+        ;
+        newComponent.setName(component.getName());
+        newComponent.setType(component.getType());
+        newComponent.setCryptoProperties(component.getCryptoProperties());
+        return newComponent;
     }
 
     @Nonnull
