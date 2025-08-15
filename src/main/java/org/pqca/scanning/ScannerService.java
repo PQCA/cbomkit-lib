@@ -105,29 +105,30 @@ public abstract class ScannerService implements IScannerService {
     // components.
     @Nonnull
     public Optional<Component> deduplicateFindings(@Nonnull Component component) {
-        List<Occurrence> deduplicated = new ArrayList<Occurrence>();
-        component
-                .getEvidence()
-                .getOccurrences()
-                .forEach(
-                        occurrence -> {
-                            int findingId =
-                                    Objects.hash(
-                                            component.getName(),
-                                            occurrence.getLocation(),
-                                            occurrence.getLine(),
-                                            occurrence.getOffset());
-                            if (!this.findings.contains(findingId)) {
-                                deduplicated.add(occurrence);
-                                this.findings.add(findingId);
-                            }
-                        });
-        if (!deduplicated.isEmpty()) {
-            final Component newComponent = ScannerService.copyCryptoAsset(component);
-            final Evidence newEvidence = new Evidence();
-            newEvidence.setOccurrences(deduplicated);
-            newComponent.setEvidence(newEvidence);
-            return Optional.of(newComponent);
+        final Evidence evidence = component.getEvidence();
+        if (evidence != null) {
+            List<Occurrence> deduplicated = new ArrayList<Occurrence>();
+            evidence.getOccurrences()
+                    .forEach(
+                            occurrence -> {
+                                int findingId =
+                                        Objects.hash(
+                                                component.getName(),
+                                                occurrence.getLocation(),
+                                                occurrence.getLine(),
+                                                occurrence.getOffset());
+                                if (!this.findings.contains(findingId)) {
+                                    deduplicated.add(occurrence);
+                                    this.findings.add(findingId);
+                                }
+                            });
+            if (!deduplicated.isEmpty()) {
+                final Component newComponent = ScannerService.copyCryptoAsset(component);
+                final Evidence newEvidence = new Evidence();
+                newEvidence.setOccurrences(deduplicated);
+                newComponent.setEvidence(newEvidence);
+                return Optional.of(newComponent);
+            }
         }
         return Optional.empty();
     }

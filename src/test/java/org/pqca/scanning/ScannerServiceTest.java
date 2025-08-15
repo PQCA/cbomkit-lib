@@ -38,6 +38,7 @@ import org.pqca.scanning.java.JavaScannerService;
 public class ScannerServiceTest {
     @Test
     void testDeduplication() {
+        // Create a component with two identical findings
         Component c = new Component();
         c.setName("test");
         c.setBomRef("test-ref");
@@ -55,23 +56,27 @@ public class ScannerServiceTest {
         o1.setLocation("/tmp/x");
         o1.setLine(1);
         o1.setOffset(0);
-        Occurrence o2 = new Occurrence();
-        o2.setLocation("/tmp/x");
-        o2.setLine(1);
-        o2.setOffset(0);
-        e.setOccurrences(List.of(o1, o2));
+        e.setOccurrences(List.of(o1, o1));
         c.setEvidence(e);
 
         ScannerService scannerService = new JavaScannerService(new File("."));
         Optional<Component> deduplicated = scannerService.deduplicateFindings(c);
-        assertThat(deduplicated.isPresent()).isTrue();
-        deduplicated.ifPresent(
-                dc -> {
-                    assertThat(dc.getName()).isEqualTo(c.getName());
-                    assertThat(dc.getBomRef()).isEqualTo(c.getBomRef());
-                    assertThat(dc.getType()).isEqualTo(c.getType());
-                    assertThat(dc.getCryptoProperties()).isEqualTo(cp); // same instance
-                    assertThat(dc.getEvidence().getOccurrences()).hasSize(1);
-                });
+        // Deduplicating this component should produce a component with only one
+        // finding.
+        assertThat(deduplicated)
+                .hasValueSatisfying(
+                        dc -> {
+                            assertThat(dc.getName()).isEqualTo(c.getName());
+                            assertThat(dc.getBomRef()).isEqualTo(c.getBomRef());
+                            assertThat(dc.getType()).isEqualTo(c.getType());
+                            assertThat(dc.getCryptoProperties()).isEqualTo(cp); // same instance
+                            assertThat(dc.getEvidence().getOccurrences()).hasSize(1);
+                        });
+
+        // The ScannerService keeps state. Deduplicating tne same component again
+        // would create an invilid component with no findings. The method should
+        // return Optional.empty().
+        deduplicated = scannerService.deduplicateFindings(c);
+        assertThat(deduplicated).isEmpty();
     }
 }
