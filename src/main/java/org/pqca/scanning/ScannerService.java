@@ -21,7 +21,6 @@ package org.pqca.scanning;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Objects;
 import com.ibm.mapper.model.INode;
 import com.ibm.output.IOutputFileFactory;
 import com.ibm.output.cyclondx.CBOMOutputFile;
@@ -34,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.cyclonedx.model.Bom;
@@ -75,27 +75,24 @@ public abstract class ScannerService implements IScannerService {
                         .getComponents()
                         .forEach(
                                 component -> {
-                                    List<Occurrence> deduplicated = deduplicateFindings(component);
-                                    if (!deduplicated.isEmpty()) {
-                                        final Component newComponent =
-                                                ScannerService.copyCryptoAsset(component);
-                                        final Evidence newEvidence = new Evidence();
-                                        newEvidence.setOccurrences(deduplicated);
-                                        newComponent.setEvidence(newEvidence);
-
-                                        ScannerService.sanitizeOccurrence(
-                                                this.projectDirectory, newComponent);
-                                        try {
-                                            this.progressDispatcher.send(
-                                                    new ProgressMessage(
-                                                            ProgressMessageType.DETECTION,
-                                                            new ObjectMapper()
-                                                                    .writeValueAsString(
-                                                                            newComponent)));
-                                        } catch (JsonProcessingException | ClientDisconnected e) {
-                                            LOGGER.error(e.getMessage());
-                                        }
-                                    }
+                                    deduplicateFindings(component)
+                                            .ifPresent(
+                                                    dedplicated -> {
+                                                        ScannerService.sanitizeOccurrence(
+                                                                this.projectDirectory, dedplicated);
+                                                        try {
+                                                            this.progressDispatcher.send(
+                                                                    new ProgressMessage(
+                                                                            ProgressMessageType
+                                                                                    .DETECTION,
+                                                                            new ObjectMapper()
+                                                                                    .writeValueAsString(
+                                                                                            dedplicated)));
+                                                        } catch (JsonProcessingException
+                                                                | ClientDisconnected e) {
+                                                            LOGGER.error(e.getMessage());
+                                                        }
+                                                    });
                                 });
             }
         }
@@ -107,7 +104,7 @@ public abstract class ScannerService implements IScannerService {
     // Subsequent calls to accept may produce duplicate findings in different
     // components.
     @Nonnull
-    private List<Occurrence> deduplicateFindings(@Nonnull Component component) {
+    public Optional<Component> deduplicateFindings(@Nonnull Component component) {
         List<Occurrence> deduplicated = new ArrayList<Occurrence>();
         component
                 .getEvidence()
@@ -115,7 +112,7 @@ public abstract class ScannerService implements IScannerService {
                 .forEach(
                         occurrence -> {
                             int findingId =
-                                    Objects.hashCode(
+                                    Objects.hash(
                                             component.getName(),
                                             occurrence.getLocation(),
                                             occurrence.getLine(),
@@ -125,14 +122,20 @@ public abstract class ScannerService implements IScannerService {
                                 this.findings.add(findingId);
                             }
                         });
-        return deduplicated;
+        if (!deduplicated.isEmpty()) {
+            final Component newComponent = ScannerService.copyCryptoAsset(component);
+            final Evidence newEvidence = new Evidence();
+            newEvidence.setOccurrences(deduplicated);
+            newComponent.setEvidence(newEvidence);
+            return Optional.of(newComponent);
+        }
+        return Optional.empty();
     }
 
     @Nonnull
     private static Component copyCryptoAsset(@Nonnull Component component) {
         final Component newComponent = new Component();
         newComponent.setBomRef(component.getBomRef());
-        ;
         newComponent.setName(component.getName());
         newComponent.setType(component.getType());
         newComponent.setCryptoProperties(component.getCryptoProperties());
