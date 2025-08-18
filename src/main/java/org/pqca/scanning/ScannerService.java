@@ -77,9 +77,10 @@ public abstract class ScannerService implements IScannerService {
                                 component -> {
                                     deduplicateFindings(component)
                                             .ifPresent(
-                                                    dedplicated -> {
+                                                    deduplicated -> {
                                                         ScannerService.sanitizeOccurrence(
-                                                                this.projectDirectory, dedplicated);
+                                                                this.projectDirectory,
+                                                                deduplicated);
                                                         try {
                                                             this.progressDispatcher.send(
                                                                     new ProgressMessage(
@@ -87,7 +88,7 @@ public abstract class ScannerService implements IScannerService {
                                                                                     .DETECTION,
                                                                             new ObjectMapper()
                                                                                     .writeValueAsString(
-                                                                                            dedplicated)));
+                                                                                            deduplicated)));
                                                         } catch (JsonProcessingException
                                                                 | ClientDisconnected e) {
                                                             LOGGER.error(e.getMessage());
@@ -123,24 +124,11 @@ public abstract class ScannerService implements IScannerService {
                                 }
                             });
             if (!deduplicated.isEmpty()) {
-                final Component newComponent = ScannerService.copyCryptoAsset(component);
-                final Evidence newEvidence = new Evidence();
-                newEvidence.setOccurrences(deduplicated);
-                newComponent.setEvidence(newEvidence);
-                return Optional.of(newComponent);
+                evidence.setOccurrences(deduplicated);
+                return Optional.of(component);
             }
         }
         return Optional.empty();
-    }
-
-    @Nonnull
-    private static Component copyCryptoAsset(@Nonnull Component component) {
-        final Component newComponent = new Component();
-        newComponent.setBomRef(component.getBomRef());
-        newComponent.setName(component.getName());
-        newComponent.setType(component.getType());
-        newComponent.setCryptoProperties(component.getCryptoProperties());
-        return newComponent;
     }
 
     @Nonnull
