@@ -29,9 +29,13 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.cyclonedx.model.Bom;
 import org.cyclonedx.model.Component;
 import org.cyclonedx.model.Evidence;
@@ -49,11 +53,13 @@ public abstract class ScannerService implements IScannerService {
     @Nullable protected final IProgressDispatcher progressDispatcher;
     @Nonnull protected final File projectDirectory;
     @Nonnull protected final CBOMOutputFile cbomOutputFile;
+    @Nonnull Set<Integer> findings;
 
     protected ScannerService(
             @Nullable IProgressDispatcher progressDispatcher, @Nonnull File projectDirectory) {
         this.progressDispatcher = progressDispatcher;
         this.projectDirectory = projectDirectory;
+        this.findings = new HashSet<Integer>();
         this.cbomOutputFile = new CBOMOutputFile();
     }
 
@@ -69,20 +75,60 @@ public abstract class ScannerService implements IScannerService {
                         .getComponents()
                         .forEach(
                                 component -> {
-                                    ScannerService.sanitizeOccurrence(
-                                            this.projectDirectory, component);
-                                    try {
-                                        this.progressDispatcher.send(
-                                                new ProgressMessage(
-                                                        ProgressMessageType.DETECTION,
-                                                        new ObjectMapper()
-                                                                .writeValueAsString(component)));
-                                    } catch (JsonProcessingException | ClientDisconnected e) {
-                                        LOGGER.error(e.getMessage());
-                                    }
+                                    deduplicateFindings(component)
+                                            .ifPresent(
+                                                    deduplicated -> {
+                                                        ScannerService.sanitizeOccurrence(
+                                                                this.projectDirectory,
+                                                                deduplicated);
+                                                        try {
+                                                            this.progressDispatcher.send(
+                                                                    new ProgressMessage(
+                                                                            ProgressMessageType
+                                                                                    .DETECTION,
+                                                                            new ObjectMapper()
+                                                                                    .writeValueAsString(
+                                                                                            deduplicated)));
+                                                        } catch (JsonProcessingException
+                                                                | ClientDisconnected e) {
+                                                            LOGGER.error(e.getMessage());
+                                                        }
+                                                    });
                                 });
             }
         }
+    }
+
+    // Fix for #268: A finding is a cryptoProperties object at a particular
+    // location.
+    // A single component may therefore represent multiple findings.
+    // Subsequent calls to accept may produce duplicate findings in different
+    // components.
+    @Nonnull
+    public Optional<Component> deduplicateFindings(@Nonnull Component component) {
+        final Evidence evidence = component.getEvidence();
+        if (evidence != null) {
+            List<Occurrence> deduplicated = new ArrayList<Occurrence>();
+            evidence.getOccurrences()
+                    .forEach(
+                            occurrence -> {
+                                int findingId =
+                                        Objects.hash(
+                                                component.getName(),
+                                                occurrence.getLocation(),
+                                                occurrence.getLine(),
+                                                occurrence.getOffset());
+                                if (!this.findings.contains(findingId)) {
+                                    deduplicated.add(occurrence);
+                                    this.findings.add(findingId);
+                                }
+                            });
+            if (!deduplicated.isEmpty()) {
+                evidence.setOccurrences(deduplicated);
+                return Optional.of(component);
+            }
+        }
+        return Optional.empty();
     }
 
     @Nonnull
