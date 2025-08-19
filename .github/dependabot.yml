@@ -4,13 +4,24 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
+registries:
+  maven-github:
+    type: maven-repository
+    url: https://maven.pkg.github.com/
+    username: ${{github.actor}}
+    password: ${{secrets.GITHUB_TOKEN}}
+
 updates:
   - package-ecosystem: maven
+    registries:
+      - maven-github
     directory: /
     target-branch: "main"
     schedule:
       interval: daily
   - package-ecosystem: github-actions
+    registries:
+      - maven-github
     directory: /
     target-branch: "main"
     schedule:
