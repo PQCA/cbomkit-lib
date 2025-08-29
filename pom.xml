@@ -13,7 +13,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <sonar.crypto.plugin.version>1.4.5</sonar.crypto.plugin.version>
+        <sonar.crypto.plugin.version>1.4.6</sonar.crypto.plugin.version>
         <sonar.plugin.api.version>13.0.0.3026</sonar.plugin.api.version>
         <sonar.plugin.api.impl.version>25.8.0.112029</sonar.plugin.api.impl.version>
 
