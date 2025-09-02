@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.pqca.errors.ClientDisconnected;
 import org.pqca.indexing.ProjectModule;
 import org.pqca.progress.IProgressDispatcher;
@@ -36,16 +37,20 @@ import org.pqca.scanning.ScanResultDTO;
 import org.pqca.scanning.ScannerService;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
+import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.config.internal.MapSettings;
+import org.sonar.api.issue.NoSonarFilter;
 import org.sonar.api.measures.FileLinesContext;
 import org.sonar.api.measures.FileLinesContextFactory;
 import org.sonar.java.DefaultJavaResourceLocator;
 import org.sonar.java.JavaFrontend;
+import org.sonar.java.Measurer;
 import org.sonar.java.SonarComponents;
 import org.sonar.java.classpath.ClasspathForMain;
 import org.sonar.java.classpath.ClasspathForTest;
 import org.sonar.java.model.JavaVersionImpl;
+import org.sonar.java.telemetry.NoOpTelemetry;
 import org.sonar.plugins.java.api.JavaResourceLocator;
 import org.sonar.plugins.java.api.JavaVersion;
 
@@ -154,7 +159,8 @@ public final class JavaScannerService extends ScannerService {
                 new JavaFrontend(
                         JAVA_VERSION,
                         sonarComponents,
-                        null,
+                        getMeasurer(sensorContext),
+                        new NoOpTelemetry(),
                         javaResourceLocator,
                         null,
                         new JavaDetectionCollectionRule(this));
@@ -220,6 +226,18 @@ public final class JavaScannerService extends ScannerService {
                 classpathForTest,
                 null,
                 null);
+    }
+
+    @Nonnull
+    private static Measurer getMeasurer(SensorContext context) {
+        return new Measurer(
+                context,
+                new NoSonarFilter() {
+                    @Override
+                    public NoSonarFilter noSonarInFile(InputFile arg0, Set<Integer> arg1) {
+                        return null;
+                    }
+                });
     }
 
     // private String findClassDirs() {

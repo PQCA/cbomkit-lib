@@ -76,11 +76,10 @@ public final class PythonScannerService extends ScannerService {
                 final PythonScannableFile pythonScannableFile = new PythonScannableFile(inputFile);
                 final FileInput parsedFile = pythonScannableFile.parse();
                 final PythonVisitorContext context =
-                        new PythonVisitorContext(
-                                parsedFile,
-                                pythonScannableFile,
-                                this.projectDirectory,
-                                project.identifier());
+                        new PythonVisitorContext.Builder(parsedFile, pythonScannableFile)
+                                .workingDirectory(this.projectDirectory)
+                                .packageName(project.identifier())
+                                .build();
                 visitor.scanFile(context);
             }
             counter++;
